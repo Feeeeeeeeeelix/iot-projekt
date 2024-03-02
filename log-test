@@ -77,8 +77,8 @@ def maximum_erkannt(value: int, time: time):
 
 def newvalue(value:int):
     telemetry = {"sensor": value}
-    # tb.send(telemetry) 
-
+    # tb.send(telemetry
+ 
 
 def plot():
     while True:
