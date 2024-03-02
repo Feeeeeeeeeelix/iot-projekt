@@ -1,0 +1,10 @@
+
+# Fuer den AD Wandler
+adafruit-circuitpython-ads1x15
+
+#  fuer die Verbindung mit MQTT
+tb-mqtt-client
+
+# Um die env datei zu laden
+python-dotenv
+
