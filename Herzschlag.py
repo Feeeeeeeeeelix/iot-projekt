@@ -42,47 +42,44 @@ class HerzschlagMessung:
         
         THRESHHOLD = 2
         THRESSHOLDRATIO = 0.95
-        try:
-            while True:
-                currentValue = self.chan0.value
-                self.save_new_value(currentValue)
-                logging.debug(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5} {(currentValue-10000)//300 * '#'} \r")
-                
-                if currentValue > maximum:
-                    maximum = currentValue
-                    maximumTime = time.time()
-                    valuesUnderMaximum = 0
-                elif currentValue < maximum:
-                    valuesUnderMaximum += 1
-                    
-                if valuesUnderMaximum >= THRESHHOLD and searchingForMaximum and currentValue < THRESSHOLDRATIO*maximum:
-                    # maximum erkannt
-                    self.maximum_erkannt(maximum, maximumTime)
-                    minimum = currentValue
-                    valuesUnderMaximum = 0
-                    searchingForMaximum = False
-                    valuesOverMinimum = 0
+        
+        while True:
+            currentValue = self.chan0.value
+            self.save_new_value(currentValue)
+            logging.debug(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5} {(currentValue-10000)//300 * '#'} \r")
             
-                        
-                if currentValue < minimum:
-                    minimum = currentValue
-                    valuesOverMinimum = 0
-                elif currentValue > minimum:
-                    valuesOverMinimum += 1
+            if currentValue > maximum:
+                maximum = currentValue
+                maximumTime = time.time()
+                valuesUnderMaximum = 0
+            elif currentValue < maximum:
+                valuesUnderMaximum += 1
                 
-                if valuesOverMinimum >= THRESHHOLD and not searchingForMaximum:
-                    # minimum erkannt
-                    # logging.debug("minimum erkannt\r")
-                    maximum = currentValue
-                    valuesOverMinimum = 0
-                    valuesUnderMaximum = 0
-                    searchingForMaximum = True
+            if valuesUnderMaximum >= THRESHHOLD and searchingForMaximum and currentValue < THRESSHOLDRATIO*maximum:
+                # maximum erkannt
+                self.maximum_erkannt(maximum, maximumTime)
+                minimum = currentValue
+                valuesUnderMaximum = 0
+                searchingForMaximum = False
+                valuesOverMinimum = 0
+        
                     
-                time.sleep(0.01)
+            if currentValue < minimum:
+                minimum = currentValue
+                valuesOverMinimum = 0
+            elif currentValue > minimum:
+                valuesOverMinimum += 1
+            
+            if valuesOverMinimum >= THRESHHOLD and not searchingForMaximum:
+                # minimum erkannt
+                # logging.debug("minimum erkannt\r")
+                maximum = currentValue
+                valuesOverMinimum = 0
+                valuesUnderMaximum = 0
+                searchingForMaximum = True
                 
-                
-        except KeyboardInterrupt:
-            pass
+            time.sleep(0.01)
+
 
 
     def maximum_erkannt(self, value: int, time: time):
@@ -111,13 +108,3 @@ class HerzschlagMessung:
             # screen.refresh()
             
             time.sleep(0.01)
-
-def lel(a):
-    print(a)
-    print()
-
-if __name__ == "__main__":
-    h = HerzschlagMessung(lel)
-    h.erkenne_maximum()
-    
-    

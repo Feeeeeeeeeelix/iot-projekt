@@ -4,7 +4,7 @@ import time
 import logging
 import TemperaturSensor
 import Herzschlag
-from led import LED
+from KY001_LED import LED
 
 global led
 led = LED()
@@ -40,12 +40,24 @@ def plot_herzschlag(value):
 
 def send_herzschlag(value_stack: list):
     telemetry = {"herzschlag": value_stack}
+    s={
+        "ts": 1711718630775,
+        "values": {
+            "temperature": 42.2,
+        }
+    }
+
     thingsboard.send(telemetry)
 
 def werteHerzschlagAus(tb: ThingsBoard):
     h = Herzschlag.HerzschlagMessung(plot_herzschlag, send_herzschlag)
-    h.erkenne_maximum()
-    
+    try:
+        h.erkenne_maximum()
+    except KeyboardInterrupt:
+        led.off()
+
+
+
 
 if __name__ == "__main__":
     

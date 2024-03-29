@@ -5,16 +5,6 @@ import os
 from tb_device_mqtt import TBDeviceMqttClient
 
 
-# tb_client.request_attributes(
-#     shared_keys = ["enabled", "alarm"],
-#     callback = receive_shared_attributes
-# )
-
-# tb_client.subscribe_to_attribute("enabled", callback=receive_shared_attributes)
-# tb_client.subscribe_to_attribute("alarm", callback=receive_shared_attributes)
-
-
-
 class ThingsBoard:
     def __init__(self):
         
@@ -25,7 +15,7 @@ class ThingsBoard:
 
         dotenv.load_dotenv()
         
-        logging.info(f"Stelle Verbindung zum Backend her: mqtt://{os.environ['TB_HOST']}:{os.environ['TB_PORT']}")
+        logging.debug(f"Stelle Verbindung zum Backend her: mqtt://{os.environ['TB_HOST']}:{os.environ['TB_PORT']}")
 
 
         self.tb_client = TBDeviceMqttClient(
@@ -74,6 +64,8 @@ class ThingsBoard:
                 
     def send(self, telemetry):
         self.tb_client.send_telemetry(telemetry)
+
+
 
 if __name__ == "__main__":
     
