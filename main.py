@@ -1,72 +1,79 @@
-from ThingsBoardConnection import ThingsBoard
 
 import time
 import logging
-import TemperaturSensor
-import Herzschlag
-from KY001_LED import LED
+import LedStrip
+from BlinkLED import LED
+from TemperaturSensor import TemperaturSensor
+from Herzschlag import HerzschlagMessung
+from ThingsBoardConnection import ThingsBoard
 
-global led
-led = LED()
+
 
 logging.basicConfig(
     format = "%(asctime)s - %(levelname)s - %(message)s",
-    level = logging.INFO,
+    level = logging.DEBUG,
 )
 
-def fk(args):
-    logging.info(f"antwort: {args=}")
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
-def werteTemperaturAus(tb:ThingsBoard):
 
-    TemperaturSensor.setup()
-    TemperaturSensor.TemperaturMessung()
-    try:
-        while True:
-            temp = TemperaturSensor.TemperaturAuswertung()
-            
-            print ("Temperatur:",temp , "degC \r")
-            if temp:
-                tb.send({"temperatuuur": temp})
+class Arzt:
+    def __init__(self) -> None:
+
+        self.thingsboard_client = ThingsBoard()
+        self.alarm_led = LED()
+
+
+    def schalte_temperaturalarm(self, alarmzustand: bool):
+        pass
+
+    def werteTemperaturAus(self):
+
+        temperatur_sensor = TemperaturSensor(self.schalte_temperaturalarm)
+        try:
+            while True:
+                temp = temperatur_sensor.get_temperature()
                 
-            time.sleep(TemperaturSensor.sleeptime)
-    except KeyboardInterrupt:
-        led.off()
+                log.info("Temperatur:",temp , "degC \r")
+                if temp:
+                    self.thingsboard_client.send({"temperatuuur": temp})
+                    
+                temperatur_sensor.wait()
+                
+        except KeyboardInterrupt:
+            led.off()
 
 
-def plot_herzschlag(value):
-    logging.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
-    led.blink()
+    def plot_herzschlag(value):
+        log.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
+        led.blink()
 
-def send_herzschlag(value_stack: list):
-    telemetry = {"herzschlag": value_stack}
-    s={
-        "ts": 1711718630775,
-        "values": {
-            "temperature": 42.2,
+    def send_herzschlag(value_stack: list):
+        telemetry = {"herzschlag": value_stack}
+        s={
+            "ts": 1711718630775,
+            "values": {
+                "temperature": 42.2,
+            }
         }
-    }
 
-    thingsboard.send(telemetry)
+        thingsboard.send(telemetry)
+        
+        
+    def show_herzschlag_on_strip(current_value: int):
+        LedStrip.on_receive_herzschlag_value(current_value)
 
-def werteHerzschlagAus(tb: ThingsBoard):
-    h = Herzschlag.HerzschlagMessung(plot_herzschlag, send_herzschlag)
-    try:
-        h.erkenne_maximum()
-    except KeyboardInterrupt:
-        led.off()
+    def werteHerzschlagAus(self):
+        herzschlagmesser = HerzschlagMessung()
+        try:
+            herzschlagmesser.erkenne_maximum()
+        except KeyboardInterrupt:
+            led.off()
 
 
 
 
 if __name__ == "__main__":
     
-    thingsboard = ThingsBoard()
-    
-    # werteTemperaturAus(thingsboard)
-    
-    werteHerzschlagAus(thingsboard)
-
-    # thingsboard.subscribe_to_attribute("enabled", fk)
-    # time.sleep(2)
-    # time.sleep(5)
+    artz = Arzt()

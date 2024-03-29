@@ -2,18 +2,26 @@
 import glob
 import time
 import logging
+from threading import Thread
 import RPi.GPIO as GPIO
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
  
-ABTASTRATE = 1
-
 class TemperaturSensor:
-    def __init__(self) -> None:
+    """ stellt den Temperatursensor KY001 dar.
+    teilweise uebernommen und angepasst von: https://sensorkit.joy-it.net/de/sensors/ky-001"""
+    
+    MAX_TEMPERATURE_THRESHHOLD = 26
+    ABTASTRATE = 1
+    
+    def __init__(self, alarm_callback) -> None:
         self.setup()
-        
+
+        self.is_critical = False
+        self.alarm_callback = alarm_callback
+    
         
     def setup(self):
         """Initialisiere den Temperatursensor auf dem GPIO PIN 4"""
@@ -57,10 +65,24 @@ class TemperaturSensor:
             if equals_pos != -1:
                 temp_string = lines[1][equals_pos+2:]
                 temp_c = float(temp_string) / 1000.0
+                
+                self.check_temperature(temp_c)
                 return temp_c
         except:
             return None
+    
+    def check_temperature(self, temperature: float):
+        if temperature > self.MAX_TEMPERATURE_THRESHHOLD:
+            self.is_critical = True
+            self.alarm_callback(temperature)
+    
+    def wait_thread(self):
+        time.sleep(self.ABTASTRATE)
         
+    def wait(self):
+        wait_thread = Thread(target= self.wait_thread)
+        wait_thread.start()
+    
     def __del__(self):
         GPIO.cleanup()
 

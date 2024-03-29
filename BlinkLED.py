@@ -5,7 +5,7 @@ from threading import Thread
 
 
 class LED:
-    """stellt die LED KY001 dar. Diese soll beim Herzschlag kurz blinken"""
+    """stellt die LED KY-034 dar. Diese soll beim Herzschlag kurz blinken"""
     
     def __init__(self) -> None:
         self.setup()
