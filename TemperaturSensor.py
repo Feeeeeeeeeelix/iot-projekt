@@ -35,23 +35,23 @@ class TemperaturSensor:
         self.device_file = device_folder + '/w1_slave'
     
  
-    def lese_datei_aus(self):
+    def read_file(self) -> list:
         """Der Temperatursensor wird als One-Wire Slaves im Ordner /sys/bus/w1/devices/ 
         als Datei erfasst, in der die gespeicherten Messwerte stehen"""
         with open(self.device_file, "r") as file:
             lines = file.readlines()
         return lines
  
-    def get_temperature(self):
+    def get_temperature(self) -> float:
         """Gebe die aktuell gemessene Temperatur in °C zurueck."""
         
         try:
-            lines = self.lese_datei_aus()
+            lines = self.read_file()
             log.debug(f"{lines=}")
             while lines[0].strip()[-3:] != 'YES':
                 time.sleep(0.2)
                 log.error(f"Error while reading temperature from file {lines=}")
-                lines = self.lese_datei_aus()
+                lines = self.read_file()
                 
             equals_pos = lines[1].find('t=')
             if equals_pos != -1:
