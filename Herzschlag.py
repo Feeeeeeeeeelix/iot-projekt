@@ -17,6 +17,8 @@ class HerzschlagMessung:
         
         self.setup()
         self.callback = maximum_callback
+        
+        self.value_stack = {}
 
     def setup(self):
         i2c = busio.I2C(board.SCL, board.SDA)
@@ -42,7 +44,7 @@ class HerzschlagMessung:
         try:
             while True:
                 currentValue = self.chan0.value
-                # self.newvalue(currentValue)
+                self.save_new_value(currentValue)
                 logging.debug(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5} {(currentValue-10000)//300 * '#'} \r")
                 
                 if currentValue > maximum:
@@ -75,7 +77,7 @@ class HerzschlagMessung:
                     valuesUnderMaximum = 0
                     searchingForMaximum = True
                     
-                time.sleep(0.1)
+                time.sleep(0.01)
                 
                 
         except KeyboardInterrupt:
@@ -84,9 +86,13 @@ class HerzschlagMessung:
 
     def maximum_erkannt(self, value: int, time: time):
         self.callback(value)#{"value": value, "time": time})
-        # logging.info(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
+        logging.info(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
 
-
+    def save_new_value(self, current_value):
+        current_time = time.time()
+        self.value_stack[current_time] = current_value
+        
+    
     def plot(self):
         while True:
             

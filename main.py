@@ -4,7 +4,10 @@ import time
 import logging
 import TemperaturSensor
 import Herzschlag
+from led import LED
 
+global led
+led = LED()
 
 logging.basicConfig(
     format = "%(asctime)s - %(levelname)s - %(message)s",
@@ -18,16 +21,23 @@ def werteTemperaturAus(tb:ThingsBoard):
 
     TemperaturSensor.setup()
     TemperaturSensor.TemperaturMessung()
-    while True:
-        temp = TemperaturSensor.TemperaturAuswertung()
-        print ("Temperatur:",temp , "degC \r")
-        if temp:
-            tb.send({"temperatuuur": temp})
-        time.sleep(TemperaturSensor.sleeptime)
+    try:
+        while True:
+            temp = TemperaturSensor.TemperaturAuswertung()
+            
+            print ("Temperatur:",temp , "degC \r")
+            if temp:
+                tb.send({"temperatuuur": temp})
+                
+            time.sleep(TemperaturSensor.sleeptime)
+    except KeyboardInterrupt:
+        led.off()
 
 
 def plot_herzschlag(value):
     logging.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
+    led.blink()
+
 
 def werteHerzschlagAus(tb: ThingsBoard):
     h = Herzschlag.HerzschlagMessung(plot_herzschlag)
