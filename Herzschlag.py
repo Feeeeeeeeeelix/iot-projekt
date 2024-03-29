@@ -13,12 +13,13 @@ logging.basicConfig(
 )
 
 class HerzschlagMessung:
-    def __init__(self, maximum_callback):
+    def __init__(self, maximum_callback, send_callback):
         
         self.setup()
         self.callback = maximum_callback
+        self.send_callback = send_callback
         
-        self.value_stack = {}
+        self.value_stack = []
 
     def setup(self):
         i2c = busio.I2C(board.SCL, board.SDA)
@@ -88,9 +89,14 @@ class HerzschlagMessung:
         self.callback(value)#{"value": value, "time": time})
         logging.info(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
 
-    def save_new_value(self, current_value):
+    def save_new_value(self, current_value: int):
         current_time = time.time()
-        self.value_stack[current_time] = current_value
+        # self.value_stack[current_time] = current_value
+        self.value_stack.append([current_time, current_value])
+        
+        if len(self.value_stack) > 10:
+            self.send_callback(self.value_stack)
+            self.value_stack.clear()
         
     
     def plot(self):

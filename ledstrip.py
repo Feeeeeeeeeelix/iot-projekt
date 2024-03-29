@@ -48,7 +48,7 @@ def Aenderungsrate(new_width):
     return a                      # Aenderungsrate zurückgeben
 
 # Hauptlogik
-if _name_ == '_main_':
+if __name__ == '__main__':
 
     try:
         Bild_Pfad = "/home/pi/sui.jpg"                                          # Bildpfad eingeben

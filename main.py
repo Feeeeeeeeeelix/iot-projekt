@@ -38,9 +38,12 @@ def plot_herzschlag(value):
     logging.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
     led.blink()
 
+def send_herzschlag(value_stack: list):
+    telemetry = {"herzschlag": value_stack}
+    thingsboard.send(telemetry)
 
 def werteHerzschlagAus(tb: ThingsBoard):
-    h = Herzschlag.HerzschlagMessung(plot_herzschlag)
+    h = Herzschlag.HerzschlagMessung(plot_herzschlag, send_herzschlag)
     h.erkenne_maximum()
     
 
