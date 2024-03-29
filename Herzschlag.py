@@ -13,109 +13,92 @@ log.setLevel(logging.DEBUG)
 class HerzschlagMessung:
     ABTASTRATE = 0.01
     
-    def __init__(self, maximum_callback, send_callback, strip_callback):
-        self.setup()
+    THRESHHOLD = 2
+    THRESSHOLDRATIO = 0.95
+    
+    def __init__(self, maximum_callback):
+        self.setup_sensor()
         self.callback = maximum_callback
-        self.send_callback = send_callback
-        self.strip_callback = strip_callback
         
         self.value_stack = []
         self.puls = None
     
+        currentValue = self.sensor.value
 
-    def setup(self):
+        self.current_maximum = currentValue
+        self.current_maximum_time = time.time()
+        self.values_under_minimum = 0
+        self.searching_for_maximum = True
+
+        self.current_minimum = currentValue
+        self.values_over_minimum = 0
+
+
+    def setup_sensor(self):
         """Initialisert den Herzschlagsensor Input am AD Wandler am I2C Bus Pin"""
         i2c = busio.I2C(board.SCL, board.SDA)
         ads = ADS.ADS1115(i2c)
 
         self.sensor = AnalogIn(ads, ADS.P0)
 
-    def erkenne_maximum(self):
-        """Tastet den Sensore alle 10ms ab und erkennt jedes lokale Maximum"""
+    def erkenne_maximum(self, current_value):
+        """Erkennt jedes lokale Maximum"""
 
-        currentValue = self.sensor.value
-
-        maximum = currentValue
-        maximumTime = time.time()
-        valuesUnderMaximum = 0
-        searchingForMaximum = True
-
-        minimum = currentValue
-        valuesOverMinimum = 0
-        
-        THRESHHOLD = 2
-        THRESSHOLDRATIO = 0.95
-        
-        while True:
-            # Abfrage eines neuen Werts
-            currentValue = self.sensor.value
-            self.new_value(currentValue)
-            log.debug(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5} {(currentValue-10000)//300 * '#'} \r")
+        if current_value > self.current_maximum:
+            # Die werte steigen. der neue Wert wird zum neuen Maximum. 
+            self.current_maximum = current_value
+            self.current_maximum_time = time.time()
+            self.values_under_minimum = 0
+        elif current_value < self.current_maximum:
+            # Die werte sinken wieder
+            self.values_under_minimum += 1
             
-            if currentValue > maximum:
-                # Die werte steigen. der neue Wert wird zum neuen Maximum. 
-                maximum = currentValue
-                maximumTime = time.time()
-                valuesUnderMaximum = 0
-            elif currentValue < maximum:
-                # Die werte sinken wieder
-                valuesUnderMaximum += 1
+        if self.values_under_minimum >= self.THRESHHOLD and self.searching_for_maximum and current_value < self.THRESSHOLDRATIO*self.current_maximum:
+            # Maximum erkannt
+            # nach 2 aufeinanderfolgende sinkende Werte die kleiner als 0.95 des letzten 
+            # lokalen Maximums sind, wird das letzte Maximum als solches anerkannt.
+            # Zwischen zwei Maxima muss immer ein Minimum liegen, deshalb wird noch ueberprueft, 
+            # dass man gerade nach einem Maximum sucht
+            self.maximum_erkannt(self.current_maximum, self.current_maximum_time)
+            self.current_minimum = current_value
+            self.values_under_minimum = 0
+            self.searching_for_maximum = False
+            self.values_over_minimum = 0
+    
                 
-            if valuesUnderMaximum >= THRESHHOLD and searchingForMaximum and currentValue < THRESSHOLDRATIO*maximum:
-                # Maximum erkannt
-                # nach 2 aufeinanderfolgende sinkende Werte die kleiner als 0.95 des letzten 
-                # lokalen Maximums sind, wird das letzte Maximum als solches anerkannt.
-                # Zwischen zwei Maxima muss immer ein Minimum liegen, deshalb wird noch ueberprueft, 
-                # dass man gerade nach einem Maximum sucht
-                self.maximum_erkannt(maximum, maximumTime)
-                minimum = currentValue
-                valuesUnderMaximum = 0
-                searchingForMaximum = False
-                valuesOverMinimum = 0
+        if current_value < self.current_minimum:
+            # Sinkende Werte: der aktuelle wird zum neuen Minimum
+            self.current_minimum = current_value
+            self.values_over_minimum = 0
+        elif current_value > self.current_minimum:
+            # Steigende Werte nach einem Minimum
+            self.values_over_minimum += 1
         
-                    
-            if currentValue < minimum:
-                # Sinkende Werte: der aktuelle wird zum neuen Minimum
-                minimum = currentValue
-                valuesOverMinimum = 0
-            elif currentValue > minimum:
-                # Steigende Werte nach einem Minimum
-                valuesOverMinimum += 1
+        if self.values_over_minimum >= self.THRESHHOLD and not self.searching_for_maximum:
+            # minimum erkannt. 
+            # Zwischen zwei Minima muss sich ein Maximum befinden
+            self.current_maximum = current_value
+            self.values_over_minimum = 0
+            self.values_under_minimum = 0
+            self.searching_for_maximum = True
             
-            if valuesOverMinimum >= THRESHHOLD and not searchingForMaximum:
-                # minimum erkannt. 
-                # Zwischen zwei Minima muss sich ein Maximum befinden
-                maximum = currentValue
-                valuesOverMinimum = 0
-                valuesUnderMaximum = 0
-                searchingForMaximum = True
-                
-            time.sleep(self.ABTASTRATE)
 
+    def abtastung(self):
+        current_value = self.sensor.value
+        
+        self.erkenne_maximum(current_value)
+        
+        # log.debug(f"{current_value:>5} {self.curretn_maximum:>5} {self.values_under_minimum:>2} {self.valuesOverMinimum:>2} {self.searchingForMaximum:>5} {self.minimum:>5} {(current_value-10000)//300 * '#'} \r")
+        return current_value
+    
+    
     def maximum_erkannt(self, value: int, time: time):
         """wird aufgerufen, sobald ein Maximum erkannt wurde. value: Wert des Maximum, time: Datum dieses Maximums"""
-        log.info(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
+        log.debug(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
         
         self.callback(value)
         
-        self.berechne_puls
+        self.berechne_puls(time)
         
-
-    def new_value(self, current_value: int):
-        """Bei jeder neune Abstastung wird der aktuelle Wert gespeichert und dem LED Strip uebermittelt."""
-        self.save_new_value(current_value)
-        
-        self.strip_callback(current_value)
-        
-    def save_new_value(self, current_value: int):
-        """Jeder neue Wert wird gespeichert. Wenn der Speicher 10 Werte ueberschreitet 
-        werden die Daten gebuendelt Thingsboard uebermittelt und den Speicher geloescht."""
-        current_time = time.time()
-        self.value_stack.append([current_time, current_value])
-        
-        if len(self.value_stack) > 10:
-            self.send_callback(self.value_stack)
-            self.value_stack.clear()
-    
-    def berechne_puls(time_of_maximum: float):
+    def berechne_puls(self, time_of_maximum: float):
         pass

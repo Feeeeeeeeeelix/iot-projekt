@@ -1,48 +1,50 @@
 import time
+import logging
 from rpi_ws281x import PixelStrip, Color
-import argparse
-import random
 from collections import deque
+import random
 
-# LED strip configuration:
-LED_COUNT = 90        # Number of LED pixels.
-LED_PIN = 18          # GPIO pin connected to the pixels (18 uses PWM!).
-LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
-LED_DMA = 10          # DMA channel to use for generating signal (try 10)
-LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
-LED_INVERT = False    # True to invert the signal (when using NPN transistor level shift)
-LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
-def colorWipe(strip, color):
-    for i in range(strip.numPixels()):
-        strip.setPixelColor(i, color)
-    strip.show()
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
-def on_receive_herzschlag_value(current_value: int, strip):
-    # Skalieren der Zufallszahl von 0-13000 auf 0-255
-    skalierte_wert = min(current_value // 51, 255)  # Umrechnung auf den Bereich von 0 bis 255
-    print("Skalierte Wert:", skalierte_wert)
 
-    # Erstellen einer Warteschlange mit einer maximalen Länge von 90
-    warteschlange = deque(maxlen=90)
+class LedStrip(PixelStrip):
+    LED_COUNT = 90
+    LED_PIN = 18    
     
-    # Hinzufügen der skalierten Zufallszahl zur Warteschlange
-    for _ in range(90):
-        warteschlange.append(skalierte_wert)
+    def __init__(self) -> None:
+        super().__init__(self.LED_COUNT, self.LED_PIN)
+        self.begin()
+        
+        self.warteschlange = deque([0]*self.LED_COUNT, maxlen=self.LED_COUNT)
 
-    # Aktualisieren der LED-Pixel mit den Helligkeitswerten aus der Warteschlange
-    for i in range(LED_COUNT):
-        strip.setPixelColor(i, Color(warteschlange[i], 0, 0))  # Verwende den Helligkeitswert für Rot, andere Farbkomponenten sind 0
-    strip.show()
+    def on_receive_herzschlag_value(self, current_value: int):
+        # Skalieren der Zufallszahl von 0-13000 auf 0-255
+        
+        skalierte_wert = current_value//69 % 256  # Umrechnung auf den Bereich von 0 bis 255
+        log.debug(f"Skalierte Wert: {skalierte_wert}")
+
+        # Erstellen einer Warteschlange mit einer maximalen Länge von 90
+        self.warteschlange.appendleft(skalierte_wert)
+
+        for i in range(self.LED_COUNT):
+            self.setPixelColor(i, Color(0, int(self.warteschlange[i]*0x5f/0xff),  int(self.warteschlange[i]*0x6a/0xff)))
+        self.show()
+    
+    def clear(self):
+        for i in range(self.LED_COUNT):
+            self.setPixelColor(i, Color(0,0,0))
+        self.show()
+
 
 if __name__ == '__main__':
-    strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
-    strip.begin()
+    strip = LedStrip()
 
     try:
         while True:
-            print('Updating LED strip with scaled random value.')
-            on_receive_herzschlag_value(random.randint(0, 13000), strip)
+            strip.on_receive_herzschlag_value(random.randint(0, 13000))
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
-        colorWipe(strip, Color(0, 0, 0), 10)
+        strip.clear()

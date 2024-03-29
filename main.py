@@ -1,7 +1,9 @@
 
 import time
 import logging
-import LedStrip
+from threading import Thread
+
+from LedStrip import LedStrip
 from BlinkLED import LED
 from TemperaturSensor import TemperaturSensor
 from Herzschlag import HerzschlagMessung
@@ -23,6 +25,10 @@ class Arzt:
 
         self.thingsboard_client = ThingsBoard()
         self.alarm_led = LED()
+        self.led_strip = LedStrip()
+        
+        self.herzschlagvalue_stack = []
+        
 
 
     def schalte_temperaturalarm(self, alarmzustand: bool):
@@ -45,11 +51,11 @@ class Arzt:
             led.off()
 
 
-    def plot_herzschlag(value):
+    def plot_herzschlag(self, value):
         log.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
-        led.blink()
+        self.alarm_led.blink()
 
-    def send_herzschlag(value_stack: list):
+    def send_herzschlag(self, value_stack: list):
         telemetry = {"herzschlag": value_stack}
         s={
             "ts": 1711718630775,
@@ -61,15 +67,47 @@ class Arzt:
         thingsboard.send(telemetry)
         
         
-    def show_herzschlag_on_strip(current_value: int):
-        LedStrip.on_receive_herzschlag_value(current_value)
+    def show_herzschlag_on_strip(self, current_value: int):
+        self.led_strip.on_receive_herzschlag_value(current_value)
 
-    def werteHerzschlagAus(self):
-        herzschlagmesser = HerzschlagMessung()
+
+    def start_herzschlag_messung(self):
+        self.herzschlag_messer = HerzschlagMessung(self.plot_herzschlag)
+        herzschlag_thread = Thread(target=self.herzschlag_messer_thread)
+        herzschlag_thread.start()
+        
+    def save_new_herzschlag_value(self, current_value: int):
+        """Jeder neue Wert wird gespeichert. Wenn der Speicher 10 Werte ueberschreitet 
+        werden die Daten gebuendelt Thingsboard uebermittelt und den Speicher geloescht."""
+        current_time = time.time()
+        self.herzschlagvalue_stack.append([current_time, current_value])
+        
+        if len(self.herzschlagvalue_stack) > 10:
+            self.send_herzschlagvalue_stack(self.herzschlagvalue_stack)
+            self.herzschlagvalue_stack.clear()
+    
+    def send_herzschlagvalue_stack(self, value_stack: list):
+        pass
+         
+    def herzschlag_messer_thread(self):
         try:
-            herzschlagmesser.erkenne_maximum()
-        except KeyboardInterrupt:
-            led.off()
+            while True:
+                current_herzschlag_value = self.herzschlag_messer.abtastung()
+                self.show_herzschlag_on_strip(current_herzschlag_value)
+                self.save_new_herzschlag_value(current_herzschlag_value)
+
+                time.sleep(self.herzschlag_messer.ABTASTRATE)
+            
+        except KeyboardInterrupt | SystemExit:
+            log.info("Clearing LED1")
+            self.alarm_led.off()
+            self.led_strip.clear()
+            
+    def __del__(self):
+        log.info("Clearing LED2")
+        self.alarm_led.off()
+        self.led_strip.clear()
+        
 
 
 
@@ -77,3 +115,5 @@ class Arzt:
 if __name__ == "__main__":
     
     artz = Arzt()
+    artz.start_herzschlag_messung()
+    del artz
