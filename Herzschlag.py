@@ -1,102 +1,111 @@
 
 import time
 import curses
+import logging
 import board
 import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
-from ThingsBoardConnection import ThingsBoard
+logging.basicConfig(
+    format = "%(asctime)s - %(levelname)s - %(message)s",
+    level = logging.DEBUG,
+)
 
-
-i2c = busio.I2C(board.SCL, board.SDA)
-ads = ADS.ADS1115(i2c)
-
-chan0 = AnalogIn(ads, ADS.P0)
-screen = curses.initscr()
-
-def erkenne_maximum():
-
-    currentValue = chan0.value
-
-    maximum = currentValue
-    maximumTime = time.time()
-    valuesUnderMaximum = 0
-    searchingForMaximum = True
-
-    minimum = currentValue
-    valuesOverMinimum = 0
-    
-    THRESHHOLD = 2
-    THRESSHOLDRATIO = 0.95
-    try:
-        while True:
-            currentValue = chan0.value
-            newvalue(currentValue)
-            print(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5}", (currentValue-10000)//300 * '#' + "\r")
-            
-            if currentValue > maximum:
-                maximum = currentValue
-                maximumTime = time.time()
-                valuesUnderMaximum = 0
-            elif currentValue < maximum:
-                valuesUnderMaximum += 1
-                
-            if valuesUnderMaximum >= THRESHHOLD and searchingForMaximum and currentValue < THRESSHOLDRATIO*maximum:
-                # maximum erkannt
-                maximum_erkannt(maximum, maximumTime)
-                minimum = currentValue
-                valuesUnderMaximum = 0
-                searchingForMaximum = False
-                valuesOverMinimum = 0
+class HerzschlagMessung:
+    def __init__(self, maximum_callback):
         
+        self.setup()
+        self.callback = maximum_callback
+
+    def setup(self):
+        i2c = busio.I2C(board.SCL, board.SDA)
+        ads = ADS.ADS1115(i2c)
+
+        self.chan0 = AnalogIn(ads, ADS.P0)
+        # screen = curses.initscr()
+
+    def erkenne_maximum(self):
+
+        currentValue = self.chan0.value
+
+        maximum = currentValue
+        maximumTime = time.time()
+        valuesUnderMaximum = 0
+        searchingForMaximum = True
+
+        minimum = currentValue
+        valuesOverMinimum = 0
+        
+        THRESHHOLD = 2
+        THRESSHOLDRATIO = 0.95
+        try:
+            while True:
+                currentValue = self.chan0.value
+                # self.newvalue(currentValue)
+                logging.debug(f"{currentValue:>5} {maximum:>5} {valuesUnderMaximum:>2} {valuesOverMinimum:>2} {searchingForMaximum:>5} {minimum:>5} {(currentValue-10000)//300 * '#'} \r")
+                
+                if currentValue > maximum:
+                    maximum = currentValue
+                    maximumTime = time.time()
+                    valuesUnderMaximum = 0
+                elif currentValue < maximum:
+                    valuesUnderMaximum += 1
                     
-            if currentValue < minimum:
-                minimum = currentValue
-                valuesOverMinimum = 0
-            elif currentValue > minimum:
-                valuesOverMinimum += 1
+                if valuesUnderMaximum >= THRESHHOLD and searchingForMaximum and currentValue < THRESSHOLDRATIO*maximum:
+                    # maximum erkannt
+                    self.maximum_erkannt(maximum, maximumTime)
+                    minimum = currentValue
+                    valuesUnderMaximum = 0
+                    searchingForMaximum = False
+                    valuesOverMinimum = 0
             
-            if valuesOverMinimum >= THRESHHOLD and not searchingForMaximum:
-                # minimum erkannt
-                print("minimum erkannt\r")
-                maximum = currentValue
-                valuesOverMinimum = 0
-                valuesUnderMaximum = 0
-                searchingForMaximum = True
+                        
+                if currentValue < minimum:
+                    minimum = currentValue
+                    valuesOverMinimum = 0
+                elif currentValue > minimum:
+                    valuesOverMinimum += 1
                 
+                if valuesOverMinimum >= THRESHHOLD and not searchingForMaximum:
+                    # minimum erkannt
+                    # logging.debug("minimum erkannt\r")
+                    maximum = currentValue
+                    valuesOverMinimum = 0
+                    valuesUnderMaximum = 0
+                    searchingForMaximum = True
+                    
+                time.sleep(0.1)
+                
+                
+        except KeyboardInterrupt:
+            pass
+
+
+    def maximum_erkannt(self, value: int, time: time):
+        self.callback(value)#{"value": value, "time": time})
+        # logging.info(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
+
+
+    def plot(self):
+        while True:
+            
+            bar_len = self.chan0.value//300 
+            
+            logging.info("#"*bar_len, "\r")
+            
+            # screen.clear()
+            # screen.addstr(0, 0,  "#" * bar_len)
+            # screen.refresh()
+            
             time.sleep(0.01)
-            
-            
-    except KeyboardInterrupt:
-        pass
-                
-                
-def maximum_erkannt(value: int, time: time):
-    print(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")    
 
-def newvalue(value:int):
-    telemetry = {"sensor": value}
-    # tb.send(telemetry
- 
-
-def plot():
-    while True:
-        
-        bar_len = chan0.value//300 
-        
-        print("#"*bar_len, "\r")
-        
-        # screen.clear()
-        # screen.addstr(0, 0,  "#" * bar_len)
-        # screen.refresh()
-        
-        time.sleep(0.01)
+def lel(a):
+    print(a)
+    print()
 
 if __name__ == "__main__":
-    global tb
-    tb = ThingsBoard()
-    
-    erkenne_maximum()
+    h = HerzschlagMessung(lel)
+    h.erkenne_maximum()
     
     

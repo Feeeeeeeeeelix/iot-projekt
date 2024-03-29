@@ -8,3 +8,5 @@ tb-mqtt-client
 # Um die env datei zu laden
 python-dotenv
 
+# LED Biblliothek
+rpi_ws281x
