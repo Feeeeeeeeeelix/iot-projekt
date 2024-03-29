@@ -71,6 +71,7 @@ class ThingsBoard:
                 
                 # Anfrage zurueck an den server
                 self.tb_client.send_attributes({attribute: value})
+                
     def send(self, telemetry):
         self.tb_client.send_telemetry(telemetry)
 
