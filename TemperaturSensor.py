@@ -66,7 +66,7 @@ class TemperaturSensor:
                 temp_string = lines[1][equals_pos+2:]
                 temp_c = float(temp_string) / 1000.0
                 
-                self.check_temperature(temp_c)
+                # self.check_temperature(temp_c)
                 return temp_c
         except Exception:
             return None

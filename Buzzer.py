@@ -5,7 +5,7 @@ from threading import Thread
 import RPi.GPIO as GPIO
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 class Buzzer:
     def __init__(self):
@@ -15,6 +15,7 @@ class Buzzer:
         GPIO.setup(self.buzzer_PIN, GPIO.OUT, initial= GPIO.LOW)
 
     def SOS(self):
+        log.warning(f"Buzzer buzzering...")
         sos_thread = Thread(target=self._sos_thread)
         sos_thread.start()
     

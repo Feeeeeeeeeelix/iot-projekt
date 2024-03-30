@@ -7,7 +7,7 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 class HerzschlagMessung:
@@ -21,6 +21,8 @@ class HerzschlagMessung:
         self.callback = maximum_callback
         
         self.value_stack = []
+        self.puls_list = []
+        self.last_puls_time = None
         self.puls = None
     
         currentValue = self.sensor.value
@@ -101,4 +103,16 @@ class HerzschlagMessung:
         self.berechne_puls(time)
         
     def berechne_puls(self, time_of_maximum: float):
-        pass
+        log.debug(f"berechne puls..")
+        if self.last_puls_time:
+            log.debug(f"{self.puls_list=}, {self.puls=}")
+            new_pulse = time_of_maximum - self.last_puls_time
+            self.puls_list.append(new_pulse)
+            if len(self.puls_list) > 6:
+                self.puls_list.pop(0)
+            
+            puls = sum(self.puls_list)/len(self.puls_list)
+            self.puls = 60/puls if puls else 0
+            
+        self.last_puls_time = time_of_maximum
+    

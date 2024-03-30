@@ -1,6 +1,7 @@
 
 import time
 import logging
+import schedule
 from threading import Thread
 
 from LedStrip import LedStrip
@@ -18,12 +19,13 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("Arzt")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 class Arzt:
     TEMP_ALARM_ATTR = "temperature_alarm"
     PULSE_ALARM_ATTR = "pulse_alarm"
+    BUZZER_STATE = "buzzer-enabled"
     
     TEMP_TELEMETRY = "temperature"
     PULS_TELEMETRY = "pulse"
@@ -39,7 +41,13 @@ class Arzt:
         
         self.temp_alarm = False
         self.puls_alarm = False
+        self.buzzer_enabled = True
         
+        self.thingsboard_client.set_callback_for_rpc_request(self.BUZZER_STATE, self.on_receive_buzzer_state)
+    
+    def on_receive_buzzer_state(self, state):
+        log.info(f"received update for buzzer state: {state}")
+        self.buzzer_enabled = state 
 
 
     def schalte_temperaturalarm(self, alarmzustand: bool):
@@ -57,16 +65,17 @@ class Arzt:
             while True:
                 temp = self.temperatur_sensor.get_temperature()
                 
+                self.send_pulse()
                 self.send_temperature(temp)
                 time.sleep(self.temperatur_sensor.ABTASTRATE)
                 
         except KeyboardInterrupt:
             del self
     
-    def on_receive_temp_alarm(self, alarm_state: bool):
+    def on_receive_alarm(self, alarm_state: bool):
         log.warning(f"Alarm state: {alarm_state}")
         
-        if alarm_state:
+        if alarm_state and self.buzzer_enabled:
             self.buzzer.SOS()
     
     def start_temperatur_auswertung(self):
@@ -75,36 +84,29 @@ class Arzt:
         temp_thread = Thread(target=self.temp_auswertung_thread)
         temp_thread.start()
         
-        self.thingsboard_client.subscribe_to_attribute(self.TEMP_ALARM_ATTR, self.on_receive_temp_alarm)
+        self.thingsboard_client.subscribe_to_attribute(self.TEMP_ALARM_ATTR, self.on_receive_alarm)
+        self.thingsboard_client.subscribe_to_attribute(self.PULSE_ALARM_ATTR, self.on_receive_alarm)
 
 
 
 
 
     def plot_herzschlag(self, value):
-        log.info(f"max: {value}  {(value-10000)//300 * '#'} \r")
+        log.debug(f"max: {value}  {(value-10000)//300 * '#'} \r")
         self.alarm_led.blink()
 
-    def send_herzschlag(self, value_stack: list):
-        telemetry = {"herzschlag": value_stack}
-        s={
-            "ts": 1711718630775,
-            "values": {
-                "temperature": 42.2,
-            }
-        }
+    def send_pulse(self):
+        if self.herzschlag_messer:
+            if puls := self.herzschlag_messer.puls:
+                telemetry = {self.PULS_TELEMETRY: puls}
 
-        self.thingsboard_client.send(telemetry)
+                log.info(f"{puls=}")
+                self.thingsboard_client.send(telemetry)
         
         
     def show_herzschlag_on_strip(self, current_value: int):
         self.led_strip.on_receive_herzschlag_value(current_value)
 
-
-    def start_herzschlag_messung(self):
-        self.herzschlag_messer = HerzschlagMessung(self.plot_herzschlag)
-        herzschlag_thread = Thread(target=self.herzschlag_messer_thread)
-        herzschlag_thread.start()
         
     def save_new_herzschlag_value(self, current_value: int):
         """Jeder neue Wert wird gespeichert. Wenn der Speicher 10 Werte ueberschreitet 
@@ -124,17 +126,22 @@ class Arzt:
             while True:
                 current_herzschlag_value = self.herzschlag_messer.abtastung()
                 self.show_herzschlag_on_strip(current_herzschlag_value)
-                self.save_new_herzschlag_value(current_herzschlag_value)
+                # self.save_new_herzschlag_value(current_herzschlag_value)
 
                 time.sleep(self.herzschlag_messer.ABTASTRATE)
             
         except KeyboardInterrupt | SystemExit:
-            log.info("Clearing LED1")
+            log.warning("Clearing LED1")
             del self
+
+    def start_herzschlag_messung(self):
+        self.herzschlag_messer = HerzschlagMessung(self.plot_herzschlag)
+        herzschlag_thread = Thread(target=self.herzschlag_messer_thread)
+        herzschlag_thread.start()
             
             
     def __del__(self):
-        log.info("Clearing LED2")
+        log.warning("Clearing LED2")
         self.alarm_led.off()
         self.led_strip.clear()
         
@@ -146,4 +153,5 @@ if __name__ == "__main__":
     
     artz = Arzt()
     artz.start_temperatur_auswertung()
+    artz.start_herzschlag_messung()
     del artz
