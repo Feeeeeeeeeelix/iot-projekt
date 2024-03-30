@@ -12,15 +12,21 @@ from ThingsBoardConnection import ThingsBoard
 
 
 logging.basicConfig(
-    format = "%(asctime)s - %(levelname)s - %(message)s",
+    format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     level = logging.DEBUG,
 )
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("Arzt")
 log.setLevel(logging.DEBUG)
 
 
 class Arzt:
+    TEMP_ALARM_ATTR = "temperature_alarm"
+    PULSE_ALARM_ATTR = "pulse_alarm"
+    
+    TEMP_TELEMETRY = "temperature"
+    PULS_TELEMETRY = "pulse"
+    
     def __init__(self) -> None:
 
         self.thingsboard_client = ThingsBoard()
@@ -29,26 +35,47 @@ class Arzt:
         
         self.herzschlagvalue_stack = []
         
+        self.temp_alarm = False
+        self.puls_alarm = False
+        
 
 
     def schalte_temperaturalarm(self, alarmzustand: bool):
-        pass
+        log.info(f"Temperatur Alarm: {alarmzustand}")
+        self.temp_alarm = alarmzustand
+        self.thingsboard_client.set_attribute(self.TEMP_ALARM_ATTR, alarmzustand)
+    
+    def send_temperature(self, temperature: float):
+        log.debug(f"Send Temperature: {temperature}°C")
+        if temperature:
+            self.thingsboard_client.send({self.TEMP_TELEMETRY: temperature})
 
-    def werteTemperaturAus(self):
-
-        temperatur_sensor = TemperaturSensor(self.schalte_temperaturalarm)
+    def temp_auswertung_thread(self):
         try:
             while True:
-                temp = temperatur_sensor.get_temperature()
+                temp = self.temperatur_sensor.get_temperature()
                 
-                log.info("Temperatur:",temp , "degC \r")
-                if temp:
-                    self.thingsboard_client.send({"temperatuuur": temp})
-                    
-                temperatur_sensor.wait()
+                self.send_temperature(temp)
+                time.sleep(self.temperatur_sensor.ABTASTRATE)
                 
         except KeyboardInterrupt:
-            led.off()
+            del self
+    
+    def on_receive_temp_alarm(self, alarm_state: bool):
+        log.warning(f"Alarm state: {alarm_state}")
+        
+        # enabled buzzer (if enabled) and alarm-LED
+    
+    def start_temperatur_auswertung(self):
+
+        self.temperatur_sensor = TemperaturSensor(self.schalte_temperaturalarm)
+        temp_thread = Thread(target=self.temp_auswertung_thread)
+        temp_thread.start()
+        
+        self.thingsboard_client.subscribe_to_attribute(self.TEMP_ALARM_ATTR, self.on_receive_temp_alarm)
+
+
+
 
 
     def plot_herzschlag(self, value):
@@ -88,7 +115,7 @@ class Arzt:
     
     def send_herzschlagvalue_stack(self, value_stack: list):
         pass
-         
+        
     def herzschlag_messer_thread(self):
         try:
             while True:
@@ -100,8 +127,7 @@ class Arzt:
             
         except KeyboardInterrupt | SystemExit:
             log.info("Clearing LED1")
-            self.alarm_led.off()
-            self.led_strip.clear()
+            del self
             
     def __del__(self):
         log.info("Clearing LED2")
@@ -115,5 +141,5 @@ class Arzt:
 if __name__ == "__main__":
     
     artz = Arzt()
-    artz.start_herzschlag_messung()
+    artz.start_temperatur_auswertung()
     del artz

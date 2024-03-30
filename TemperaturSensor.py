@@ -75,13 +75,7 @@ class TemperaturSensor:
         if temperature > self.MAX_TEMPERATURE_THRESHHOLD:
             self.is_critical = True
             self.alarm_callback(temperature)
-    
-    def wait_thread(self):
-        time.sleep(self.ABTASTRATE)
-        
-    def wait(self):
-        wait_thread = Thread(target= self.wait_thread)
-        wait_thread.start()
+
     
     def __del__(self):
         GPIO.cleanup()
