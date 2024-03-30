@@ -24,7 +24,7 @@ class HerzschlagMessung:
         self.puls_list = []
         self.last_puls_time = None
         self.puls = None
-    
+        
         currentValue = self.sensor.value
 
         self.current_maximum = currentValue
@@ -111,7 +111,7 @@ class HerzschlagMessung:
                 self.puls_list.pop(0)
             
             puls = sum(self.puls_list)/len(self.puls_list)
-            self.puls = min(60/puls if puls else 0, 200)
+            self.puls = min(30/puls if puls else 0, 200)
             
         self.last_puls_time = time_of_maximum
     

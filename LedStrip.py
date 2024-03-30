@@ -19,8 +19,9 @@ class LedStrip(PixelStrip):
         
         self.warteschlange = deque([0]*self.LED_COUNT, maxlen=self.LED_COUNT)
 
-    def on_receive_herzschlag_value(self, current_value: int):
+    def on_receive_herzschlag_value(self, current_value: int, puls:float):
         """Zeige den Herzschlag-Verlauf an. jeder neue Werte wird in einem FIFO Speicher auf dem LED Strip gemapt."""
+        puls = puls if puls else 200
         
         # Skalieren des Messwertes von 0-13000 auf 0-255
         skalierte_wert = current_value//69 % 256 
@@ -30,7 +31,10 @@ class LedStrip(PixelStrip):
 
         for i in range(self.LED_COUNT):
             # Zeige den Herzschlag als Helligkeit an. Die Farbe ist Petrol (RGB: 0x005F6A)
-            self.setPixelColor(i, Color(0, int(self.warteschlange[i]*0x5f/0xff),  int(self.warteschlange[i]*0x6a/0xff)))
+            hue = self.warteschlange[i]
+            color = Color(int(hue*puls/200.0),int(hue*(1-puls/200.0)),0)
+            self.setPixelColor(i, color)
+        # log.info(f"{color=}, {hue=}, {puls=}")
         self.show()
     
     def clear(self):

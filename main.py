@@ -44,6 +44,7 @@ class Arzt:
         self.puls_alarm = False
         self.buzzer_enabled = True
         
+        self.thingsboard_client.set_attribute(self.BUZZER_STATE, True)
         self.thingsboard_client.set_callback_for_rpc_request(self.BUZZER_STATE, self.on_receive_buzzer_state)
         
         self.herzschlagmesser_thread_active = True
@@ -117,7 +118,7 @@ class Arzt:
         
     def show_herzschlag_on_strip(self, current_value: int):
         """Zeige Herzschlag-Verlauf auf dem LED Strip an"""
-        self.led_strip.on_receive_herzschlag_value(current_value)
+        self.led_strip.on_receive_herzschlag_value(current_value, self.herzschlag_messer.puls)
 
         
     # def save_new_herzschlag_value(self, current_value: int):
