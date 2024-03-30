@@ -86,6 +86,7 @@ class HerzschlagMessung:
             
 
     def abtastung(self):
+        """Tastet den Herzschlagsensor ab und erkennt eventuell ein lokales Maximum"""
         current_value = self.sensor.value        
         self.erkenne_maximum(current_value)
 
@@ -101,6 +102,7 @@ class HerzschlagMessung:
         self.berechne_puls(time)
         
     def berechne_puls(self, time_of_maximum: float):
+        """Berechnet den Puls basierend auf den letzten Maxima. Der puls ist der Mittelwert der letzten 6 Pulse."""
         if self.last_puls_time:
             
             new_pulse = time_of_maximum - self.last_puls_time

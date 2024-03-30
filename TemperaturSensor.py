@@ -13,14 +13,10 @@ class TemperaturSensor:
     """ stellt den Temperatursensor KY001 dar.
     teilweise uebernommen und angepasst von: https://sensorkit.joy-it.net/de/sensors/ky-001"""
     
-    MAX_TEMPERATURE_THRESHHOLD = 26
     ABTASTRATE = 1
     
-    def __init__(self, alarm_callback) -> None:
+    def __init__(self) -> None:
         self.setup()
-
-        self.is_critical = False
-        self.alarm_callback = alarm_callback
     
         
     def setup(self):
@@ -71,12 +67,7 @@ class TemperaturSensor:
         except Exception:
             return None
     
-    def check_temperature(self, temperature: float):
-        if temperature > self.MAX_TEMPERATURE_THRESHHOLD:
-            self.is_critical = True
-            self.alarm_callback(temperature)
 
-    
     def __del__(self):
         GPIO.cleanup()
 
