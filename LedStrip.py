@@ -32,7 +32,7 @@ class LedStrip(PixelStrip):
         for i in range(self.LED_COUNT):
             # Zeige den Herzschlag als Helligkeit an. Die Farbe ist Petrol (RGB: 0x005F6A)
             hue = self.warteschlange[i]
-            color = Color(int(hue*puls/200.0),int(hue*(1-puls/200.0)),0)
+            color = Color(0, int(hue*0x5a/0xFF),int(hue*0x6a/0xff))
             self.setPixelColor(i, color)
         # log.info(f"{color=}, {hue=}, {puls=}")
         self.show()
