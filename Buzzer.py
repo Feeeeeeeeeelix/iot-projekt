@@ -64,7 +64,7 @@ if __name__ == "__main__":
     b = Buzzer()
     
     try:
-        while True:
-            b.SOS()
+    # while True:
+        b.SOS()
     except KeyboardInterrupt:
         del b

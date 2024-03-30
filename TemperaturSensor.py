@@ -6,7 +6,7 @@ from threading import Thread
 import RPi.GPIO as GPIO
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
  
 class TemperaturSensor:
@@ -68,7 +68,7 @@ class TemperaturSensor:
                 
                 self.check_temperature(temp_c)
                 return temp_c
-        except:
+        except Exception:
             return None
     
     def check_temperature(self, temperature: float):

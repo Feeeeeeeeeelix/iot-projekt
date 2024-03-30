@@ -5,6 +5,7 @@ from threading import Thread
 
 from LedStrip import LedStrip
 from BlinkLED import LED
+from Buzzer import Buzzer
 from TemperaturSensor import TemperaturSensor
 from Herzschlag import HerzschlagMessung
 from ThingsBoardConnection import ThingsBoard
@@ -32,6 +33,7 @@ class Arzt:
         self.thingsboard_client = ThingsBoard()
         self.alarm_led = LED()
         self.led_strip = LedStrip()
+        self.buzzer = Buzzer()
         
         self.herzschlagvalue_stack = []
         
@@ -46,7 +48,7 @@ class Arzt:
         self.thingsboard_client.set_attribute(self.TEMP_ALARM_ATTR, alarmzustand)
     
     def send_temperature(self, temperature: float):
-        log.debug(f"Send Temperature: {temperature}°C")
+        log.info(f"Send Temperature: {temperature}°C")
         if temperature:
             self.thingsboard_client.send({self.TEMP_TELEMETRY: temperature})
 
@@ -64,7 +66,8 @@ class Arzt:
     def on_receive_temp_alarm(self, alarm_state: bool):
         log.warning(f"Alarm state: {alarm_state}")
         
-        # enabled buzzer (if enabled) and alarm-LED
+        if alarm_state:
+            self.buzzer.SOS()
     
     def start_temperatur_auswertung(self):
 
@@ -91,7 +94,7 @@ class Arzt:
             }
         }
 
-        thingsboard.send(telemetry)
+        self.thingsboard_client.send(telemetry)
         
         
     def show_herzschlag_on_strip(self, current_value: int):
@@ -128,6 +131,7 @@ class Arzt:
         except KeyboardInterrupt | SystemExit:
             log.info("Clearing LED1")
             del self
+            
             
     def __del__(self):
         log.info("Clearing LED2")
