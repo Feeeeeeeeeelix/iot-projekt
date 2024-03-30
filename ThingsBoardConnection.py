@@ -36,7 +36,7 @@ class ThingsBoard:
         self.tb_client.send_attributes({attribute: value})
     
     def subscribe_to_attribute(self, attribute, callback):
-        log.info(f"subscribing to {attribute=} with {callback=}")
+        log.debug(f"subscribing to {attribute=} with {callback=}")
         self.tb_client.subscribe_to_attribute(attribute, callback=lambda attributes, *args :self.receive_shared_attributes(attribute, callback, attributes, *args))
 
     def receive_shared_attributes(self, attribute, callback, attributes, *args):

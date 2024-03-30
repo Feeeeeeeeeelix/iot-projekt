@@ -2,6 +2,7 @@
 import time
 import logging
 import schedule
+import signal
 from threading import Thread
 
 from LedStrip import LedStrip
@@ -36,6 +37,7 @@ class Arzt:
         self.alarm_led = LED()
         self.led_strip = LedStrip()
         self.buzzer = Buzzer()
+        self.herzschlag_messer = None
         
         self.herzschlagvalue_stack = []
         
@@ -44,6 +46,17 @@ class Arzt:
         self.buzzer_enabled = True
         
         self.thingsboard_client.set_callback_for_rpc_request(self.BUZZER_STATE, self.on_receive_buzzer_state)
+        
+        self.herzschlagmesser_thread_active = True
+        self.temp_thread_active = True
+        signal.signal(signal.SIGINT, self.interrupt_signal_handler)
+    
+    def interrupt_signal_handler(self, *_):
+        log.critical(f"interrupt signal catched.")
+        self.herzschlagmesser_thread_active = False
+        self.temp_thread_active = False
+        time.sleep(0.5)
+        self.__del__()
     
     def on_receive_buzzer_state(self, state):
         log.info(f"received update for buzzer state: {state}")
@@ -61,16 +74,13 @@ class Arzt:
             self.thingsboard_client.send({self.TEMP_TELEMETRY: temperature})
 
     def temp_auswertung_thread(self):
-        try:
-            while True:
-                temp = self.temperatur_sensor.get_temperature()
-                
-                self.send_pulse()
-                self.send_temperature(temp)
-                time.sleep(self.temperatur_sensor.ABTASTRATE)
-                
-        except KeyboardInterrupt:
-            del self
+        while self.temp_thread_active:
+            temp = self.temperatur_sensor.get_temperature()
+            
+            self.send_pulse()
+            self.send_temperature(temp)
+            time.sleep(self.temperatur_sensor.ABTASTRATE)
+
     
     def on_receive_alarm(self, alarm_state: bool):
         log.warning(f"Alarm state: {alarm_state}")
@@ -122,17 +132,13 @@ class Arzt:
         pass
         
     def herzschlag_messer_thread(self):
-        try:
-            while True:
-                current_herzschlag_value = self.herzschlag_messer.abtastung()
-                self.show_herzschlag_on_strip(current_herzschlag_value)
-                # self.save_new_herzschlag_value(current_herzschlag_value)
+        while self.herzschlagmesser_thread_active:
+            current_herzschlag_value = self.herzschlag_messer.abtastung()
+            self.show_herzschlag_on_strip(current_herzschlag_value)
+            # self.save_new_herzschlag_value(current_herzschlag_value)
 
-                time.sleep(self.herzschlag_messer.ABTASTRATE)
-            
-        except KeyboardInterrupt | SystemExit:
-            log.warning("Clearing LED1")
-            del self
+            time.sleep(self.herzschlag_messer.ABTASTRATE)
+
 
     def start_herzschlag_messung(self):
         self.herzschlag_messer = HerzschlagMessung(self.plot_herzschlag)

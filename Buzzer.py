@@ -13,17 +13,21 @@ class Buzzer:
         self.buzzer_PIN = 23
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.buzzer_PIN, GPIO.OUT, initial= GPIO.LOW)
+        
+        self.is_buzzering = False
 
     def SOS(self):
-        log.warning(f"Buzzer buzzering...")
-        sos_thread = Thread(target=self._sos_thread)
-        sos_thread.start()
+        if not self.is_buzzering:
+            log.warning(f"Buzzer buzzering...")
+            sos_thread = Thread(target=self._sos_thread)
+            sos_thread.start()
     
     def _sos_thread(self):
+        self.is_buzzering = True
         self._kurz_zeichen(3)
         self._lang_zeichen(3)
         self._kurz_zeichen(3)
-        self._pause(1)
+        self.is_buzzering = False
         
     def _kurz_zeichen(self, anzahl_der_wiederholung):
         for i in range (anzahl_der_wiederholung):

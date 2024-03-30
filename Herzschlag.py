@@ -86,11 +86,9 @@ class HerzschlagMessung:
             
 
     def abtastung(self):
-        current_value = self.sensor.value
-        
+        current_value = self.sensor.value        
         self.erkenne_maximum(current_value)
-        
-        # log.debug(f"{current_value:>5} {self.curretn_maximum:>5} {self.values_under_minimum:>2} {self.valuesOverMinimum:>2} {self.searchingForMaximum:>5} {self.minimum:>5} {(current_value-10000)//300 * '#'} \r")
+
         return current_value
     
     
@@ -103,16 +101,15 @@ class HerzschlagMessung:
         self.berechne_puls(time)
         
     def berechne_puls(self, time_of_maximum: float):
-        log.debug(f"berechne puls..")
         if self.last_puls_time:
-            log.debug(f"{self.puls_list=}, {self.puls=}")
+            
             new_pulse = time_of_maximum - self.last_puls_time
             self.puls_list.append(new_pulse)
             if len(self.puls_list) > 6:
                 self.puls_list.pop(0)
             
             puls = sum(self.puls_list)/len(self.puls_list)
-            self.puls = 60/puls if puls else 0
+            self.puls = min(60/puls if puls else 0, 200)
             
         self.last_puls_time = time_of_maximum
     
