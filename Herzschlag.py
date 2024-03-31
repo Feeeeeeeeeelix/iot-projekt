@@ -95,7 +95,6 @@ class HerzschlagMessung:
     
     def maximum_erkannt(self, value: int, time: time):
         """wird aufgerufen, sobald ein Maximum erkannt wurde. value: Wert des Maximum, time: Datum dieses Maximums"""
-        log.debug(f"MAXIMUM: {value=}--------------------------------------------------------------------- \r")
         
         self.callback(value)
         

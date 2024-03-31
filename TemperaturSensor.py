@@ -2,7 +2,6 @@
 import glob
 import time
 import logging
-from threading import Thread
 import RPi.GPIO as GPIO
 
 log = logging.getLogger(__name__)
@@ -62,7 +61,6 @@ class TemperaturSensor:
                 temp_string = lines[1][equals_pos+2:]
                 temp_c = float(temp_string) / 1000.0
                 
-                # self.check_temperature(temp_c)
                 return temp_c
         except Exception:
             return None

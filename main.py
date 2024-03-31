@@ -121,19 +121,6 @@ class Arzt:
         self.led_strip.on_receive_herzschlag_value(current_value, self.herzschlag_messer.puls)
 
         
-    # def save_new_herzschlag_value(self, current_value: int):
-    #     """Jeder neue Wert wird gespeichert. Wenn der Speicher 10 Werte ueberschreitet 
-    #     werden die Daten gebuendelt Thingsboard uebermittelt und den Speicher geloescht."""
-    #     current_time = time.time()
-    #     self.herzschlagvalue_stack.append([current_time, current_value])
-        
-    #     if len(self.herzschlagvalue_stack) > 10:
-    #         self.send_herzschlagvalue_stack(self.herzschlagvalue_stack)
-    #         self.herzschlagvalue_stack.clear()
-    
-    # def send_herzschlagvalue_stack(self, value_stack: list):
-    #     pass
-        
     def herzschlag_messer_thread(self):
         """Periodische Abfrage des Herzschlages und erkennen des Maximums"""
         while self.herzschlagmesser_thread_active:
