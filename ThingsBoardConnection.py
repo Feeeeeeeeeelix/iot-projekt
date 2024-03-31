@@ -27,6 +27,7 @@ class ThingsBoard:
     def get_attributes(self, attribute, callback):
         """Frage das Attribut ab. Bei antwort des Servers wird das gegebene Callback aufgerufen"""
         log.info(f"requesting {attribute=} with {callback=}")
+        
         self.tb_client.request_attributes(
             shared_keys = ["enabled", "alarm"],
             callback = lambda attributes, *args: self.receive_shared_attributes(attribute, callback, attributes, *args)
@@ -35,11 +36,13 @@ class ThingsBoard:
     def set_attribute(self, attribute, value):
         """Setzte ein bestimmtes Attribut"""
         log.info(f"setting shared {attribute=} to {value=}")
+        
         self.tb_client.send_attributes({attribute: value})
     
     def subscribe_to_attribute(self, attribute, callback):
         """Abonniere ein Attribut und bekommen bei Änderung den Wert über den Callback"""
         log.debug(f"subscribing to {attribute=} with {callback=}")
+        
         self.tb_client.subscribe_to_attribute(attribute, callback=lambda attributes, *args :self.receive_shared_attributes(attribute, callback, attributes, *args))
 
     def receive_shared_attributes(self, attribute, callback, attributes, *args):
@@ -58,6 +61,7 @@ class ThingsBoard:
             
     def set_callback_for_rpc_request(self, attribute, callback):
         """setze ein Callback für eine RPC Anfrage des Servers bei Änderung eines shared-Attributes"""
+        
         self.tb_client.set_server_side_rpc_request_handler(lambda client, request_body, attr=attribute, cb=callback: self.handle_rpc_request(attr,cb, client, request_body))
         
     
@@ -77,6 +81,7 @@ class ThingsBoard:
     def send(self, telemetry: dict):
         """Sende Telemetrie-Daten"""
         log.debug(f"sent telemetry: {telemetry}")
+        
         self.tb_client.send_telemetry(telemetry)
 
 
