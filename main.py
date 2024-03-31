@@ -51,11 +51,14 @@ class Arzt:
         self.temp_thread_active = True
         signal.signal(signal.SIGINT, self.interrupt_signal_handler)
     
+    
     def interrupt_signal_handler(self, *_):
         """Faengt den CTRL-C Interrupt auf, beendet die anderen Threads und das main Programm"""
         log.critical(f"interrupt signal catched.")
+        
         self.herzschlagmesser_thread_active = False
         self.temp_thread_active = False
+        
         time.sleep(0.5)
         self.__del__()
     
@@ -75,9 +78,9 @@ class Arzt:
         """mit der bestimmten Abtastrate wird der Temperatursensor abgetastet"""
         while self.temp_thread_active:
             temp = self.temperatur_sensor.get_temperature()
+            self.send_temperature(temp)
             
             self.send_pulse()
-            self.send_temperature(temp)
             time.sleep(self.temperatur_sensor.ABTASTRATE)
 
     
@@ -103,8 +106,8 @@ class Arzt:
 
     def plot_herzschlag(self, value):
         """Lasse bei einem erkannten Puls die LED kurz blinken"""
-        # log.debug(f"max: {value}  {(value-10000)//300 * '#'} \r")
         self.alarm_led.blink()
+
 
     def send_pulse(self):
         """Sende dem Thingsboard den aktuellen Puls, wenn vorhanden"""
@@ -126,7 +129,6 @@ class Arzt:
         while self.herzschlagmesser_thread_active:
             current_herzschlag_value = self.herzschlag_messer.abtastung()
             self.show_herzschlag_on_strip(current_herzschlag_value)
-            # self.save_new_herzschlag_value(current_herzschlag_value)
 
             time.sleep(self.herzschlag_messer.ABTASTRATE)
 

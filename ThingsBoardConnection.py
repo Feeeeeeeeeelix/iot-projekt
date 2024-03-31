@@ -29,7 +29,7 @@ class ThingsBoard:
         log.info(f"requesting {attribute=} with {callback=}")
         
         self.tb_client.request_attributes(
-            shared_keys = ["enabled", "alarm"],
+            shared_keys = [attribute],
             callback = lambda attributes, *args: self.receive_shared_attributes(attribute, callback, attributes, *args)
         )
     
